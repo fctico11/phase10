@@ -74,7 +74,7 @@
         {% endfor %}
     </div>
 
-    {% if game.check_phase_attempt() %}
+    {% if game.check_phase_attempt() and not game.phase_submitted %}
         <form action="/submit_phase" method="POST">
             <button type="submit">Submit Phase</button>
         </form>
@@ -93,12 +93,12 @@
 
     <h2>Actions</h2>
     <form action="/draw" method="POST">
-        <button type="submit" {% if game.has_drawn %}disabled{% endif %}>Draw Card</button>
-        <button type="submit" name="from_discard" value="1" {% if game.has_drawn %}disabled{% endif %}>Draw from Discard</button>
+        <button type="submit" {% if game.has_drawn or game.phase_submitted %}disabled{% endif %}>Draw Card</button>
+        <button type="submit" name="from_discard" value="1" {% if game.has_drawn or game.phase_submitted %}disabled{% endif %}>Draw from Discard</button>
     </form>
 
     <form action="/discard" method="POST">
-        <button type="submit" {% if game.selected_card_index is none or not game.has_drawn %}disabled{% endif %}>
+        <button type="submit" {% if game.selected_card_index is none or (not game.has_drawn and not game.phase_submitted) %}disabled{% endif %}>
             Discard Selected Card
         </button>
     </form>

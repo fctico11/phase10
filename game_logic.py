@@ -56,8 +56,12 @@ class Game:
         self.played_phases = {"player": [], "computer": []}
         self.phase_submission_box = []  
         self.selected_card_index = None
+        self.phase_submitted = False  # New flag: phase has been submitted this turn
 
     def draw_card(self, player, from_discard=False):
+        if self.phase_submitted:
+            # Once a phase is submitted, no further drawing is allowed.
+            return
         if player == "player" and self.current_turn == "player" and not self.has_drawn:
             if from_discard and self.discard_pile:
                 self.player_hand.append(self.discard_pile.pop())
@@ -129,6 +133,7 @@ class Game:
         if self.check_phase_attempt():
             self.played_phases["player"].extend(self.phase_submission_box)
             self.phase_submission_box.clear()
+            self.phase_submitted = True  # Mark phase as submitted so no further drawing is allowed
 
     def hit_existing_phase(self, card_index):
         if 0 <= card_index < len(self.player_hand):
@@ -150,4 +155,3 @@ class Game:
         else:
             self.computer_phase += 1
         self.reset_game()
-
