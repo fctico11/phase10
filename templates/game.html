@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phase 10 Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function drag(event) {
+            event.dataTransfer.setData("text", event.target.id);
+        }
+
+        function dropToPhase(event) {
+            event.preventDefault();
+            var cardId = event.dataTransfer.getData("text");
+            var cardElement = document.getElementById(cardId);
+            event.target.appendChild(cardElement);
+            fetch(`/add_to_phase?card_index=${cardId.split('-')[1]}`)
+                .then(() => location.reload());
+        }
+
+        function dropToHand(event) {
+            event.preventDefault();
+            var cardId = event.dataTransfer.getData("text");
+            var cardElement = document.getElementById(cardId);
+            event.target.appendChild(cardElement);
+            fetch(`/remove_from_phase?card_index=${cardId.split('-')[1]}`)
+                .then(() => location.reload());
+        }
+    </script>
+</head>
+<body>
+    <h1>Phase 10</h1>
+
+    <h2>Player Phase: {{ game.player_phase + 1 }} - {{ game.PHASES[game.player_phase] }}</h2>
+    <h2>Computer Phase: {{ game.computer_phase + 1 }} - {{ game.PHASES[game.computer_phase] }}</h2>
+
+    <h2>Draw Pile: {{ game.deck|length }} cards | Discard Pile: {{ game.discard_pile|length }} cards</h2>
+
+    <h2>Top of Discard Pile</h2>
+    <div class="card" style="background-color: {{ game.discard_pile[-1].color.lower() if game.discard_pile[-1].color else 'gray' }}">
+        <span>{{ game.discard_pile[-1].number }}</span>
+    </div>
+
+    <h2>Played Phases</h2>
+    <div>
+        {% for card in game.played_phases['player'] %}
+            <div class="card" style="background-color: {{ card.color.lower() if card.color else 'gray' }}">
+                <span>{{ card.number }}</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <h2>Phase Submission Box</h2>
+    <div id="phase-box" ondrop="dropToPhase(event)" ondragover="allowDrop(event)" 
+         style="border: 2px dashed black; padding: 20px; min-height: 100px; display: flex; flex-wrap: wrap;">
+        {% for card in game.phase_submission_box %}
+            <div id="card-{{ loop.index0 }}" class="card"
+                 style="background-color: {{ card.color.lower() if card.color else 'gray' }};"
+                 draggable="true" ondragstart="drag(event)">
+                <span>{{ card.number }}</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if game.check_phase_attempt() %}
+        <form action="/submit_phase" method="POST">
+            <button type="submit">Submit Phase</button>
+        </form>
+    {% endif %}
+
+    <h2>Your Hand</h2>
+    <div id="player-hand" ondrop="dropToHand(event)" ondragover="allowDrop(event)">
+        {% for card in game.player_hand %}
+            <div id="card-{{ loop.index0 }}" class="card"
+                 style="background-color: {{ card.color.lower() if card.color else 'gray' }};"
+                 draggable="true" ondragstart="drag(event)">
+                <span>{{ card.number }}</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <h2>Actions</h2>
+    <form action="/draw" method="POST">
+        <button type="submit" {% if game.has_drawn %}disabled{% endif %}>Draw Card</button>
+        <button type="submit" name="from_discard" value="1" {% if game.has_drawn %}disabled{% endif %}>Draw from Discard</button>
+    </form>
+
+    <form action="/discard" method="POST">
+        <button type="submit" {% if game.selected_card_index is none or not game.has_drawn %}disabled{% endif %}>
+            Discard Selected Card
+        </button>
+    </form>
+
+    <h2 id="turn-indicator">
+        {% if game.current_turn == "computer" %}
+            Computer is playing...
+        {% else %}
+            Your turn
+        {% endif %}
+    </h2>
+</body>
+</html>
+
