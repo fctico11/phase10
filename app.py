@@ -40,15 +40,21 @@ def submit_phase():
     game.submit_phase()
     return redirect(url_for("home"))
 
-@app.route("/add_to_phase", methods=["POST"])
+@app.route("/add_to_phase", methods=["GET", "POST"])
 def add_to_phase():
-    card_index = int(request.form["card_index"])
+    if request.method == "GET":
+        card_index = int(request.args.get("card_index"))
+    else:
+        card_index = int(request.form["card_index"])
     game.add_to_phase_attempt(card_index)
     return redirect(url_for("home"))
 
-@app.route("/remove_from_phase", methods=["POST"])
+@app.route("/remove_from_phase", methods=["GET", "POST"])
 def remove_from_phase():
-    card_index = int(request.form["card_index"])
+    if request.method == "GET":
+        card_index = int(request.args.get("card_index"))
+    else:
+        card_index = int(request.form["card_index"])
     game.remove_from_phase_attempt(card_index)
     return redirect(url_for("home"))
 

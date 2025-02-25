@@ -55,6 +55,7 @@ class Game:
         self.skip_turn = False  
         self.played_phases = {"player": [], "computer": []}
         self.phase_submission_box = []  
+        self.selected_card_index = None
 
     def draw_card(self, player, from_discard=False):
         if player == "player" and self.current_turn == "player" and not self.has_drawn:
@@ -67,12 +68,39 @@ class Game:
             if self.deck:
                 self.computer_hand.append(self.deck.pop())
 
-    def add_card_to_phase_attempt(self, card_index):
+    def select_card(self, card_index):
+        if 0 <= card_index < len(self.player_hand):
+            self.selected_card_index = card_index
+
+    def discard_selected_card(self):
+        if self.selected_card_index is not None and 0 <= self.selected_card_index < len(self.player_hand):
+            card_index = self.selected_card_index
+            self.selected_card_index = None
+            self.discard_card(card_index)
+            return True
+        return False
+
+    def discard_card(self, card_index):
+        if 0 <= card_index < len(self.player_hand):
+            card = self.player_hand.pop(card_index)
+            self.discard_pile.append(card)
+            self.has_drawn = False
+
+            if card.is_skip():
+                self.skip_turn = True  
+                self.current_turn = "player"
+            else:
+                self.current_turn = "computer"
+
+            if not self.player_hand:
+                self.end_round("player")
+
+    def add_to_phase_attempt(self, card_index):
         if 0 <= card_index < len(self.player_hand):
             card = self.player_hand.pop(card_index)
             self.phase_submission_box.append(card)
 
-    def remove_card_from_phase_attempt(self, card_index):
+    def remove_from_phase_attempt(self, card_index):
         if 0 <= card_index < len(self.phase_submission_box):
             card = self.phase_submission_box.pop(card_index)
             self.player_hand.append(card)
@@ -102,20 +130,19 @@ class Game:
             self.played_phases["player"].extend(self.phase_submission_box)
             self.phase_submission_box.clear()
 
-    def discard_card(self, card_index):
+    def hit_existing_phase(self, card_index):
         if 0 <= card_index < len(self.player_hand):
             card = self.player_hand.pop(card_index)
+            self.played_phases["player"].append(card)
+
+    def computer_turn(self):
+        # Simple computer logic: draw a card and discard a random card.
+        self.draw_card("computer")
+        if self.computer_hand:
+            card_index = random.randint(0, len(self.computer_hand) - 1)
+            card = self.computer_hand.pop(card_index)
             self.discard_pile.append(card)
-            self.has_drawn = False
-
-            if card.is_skip():
-                self.skip_turn = True  
-                self.current_turn = "player"
-            else:
-                self.current_turn = "computer"
-
-            if not self.player_hand:
-                self.end_round("player")
+        self.current_turn = "player"
 
     def end_round(self, winner):
         if winner == "player":
@@ -123,3 +150,4 @@ class Game:
         else:
             self.computer_phase += 1
         self.reset_game()
+

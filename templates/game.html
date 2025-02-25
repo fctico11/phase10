@@ -30,6 +30,14 @@
             fetch(`/remove_from_phase?card_index=${cardId.split('-')[1]}`)
                 .then(() => location.reload());
         }
+
+        function selectCard(cardIndex) {
+            fetch("/select_card", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "card_index=" + cardIndex
+            }).then(() => location.reload());
+        }
     </script>
 </head>
 <body>
@@ -75,9 +83,9 @@
     <h2>Your Hand</h2>
     <div id="player-hand" ondrop="dropToHand(event)" ondragover="allowDrop(event)">
         {% for card in game.player_hand %}
-            <div id="card-{{ loop.index0 }}" class="card"
+            <div id="card-{{ loop.index0 }}" class="card {% if game.selected_card_index == loop.index0 %}selected{% endif %}"
                  style="background-color: {{ card.color.lower() if card.color else 'gray' }};"
-                 draggable="true" ondragstart="drag(event)">
+                 draggable="true" ondragstart="drag(event)" onclick="selectCard({{ loop.index0 }})">
                 <span>{{ card.number }}</span>
             </div>
         {% endfor %}
