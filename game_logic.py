@@ -41,33 +41,45 @@ class Game:
     PHASES = PHASES
 
     def __init__(self):
-        self.reset_game()
-
-    def reset_game(self):
-        self.deck = create_deck()
-        self.discard_pile = [self.deck.pop()]
-        self.player_hand = [self.deck.pop() for _ in range(10)]
-        self.computer_hand = [self.deck.pop() for _ in range(10)]
+        # These fields persist across all rounds:
+        self.round = 1
         self.player_phase = 0
         self.computer_phase = 0
+
+        # Start the first hand:
+        self.start_new_hand()
+
+    def start_new_hand(self):
+        """
+        Deals a new hand, sets up a fresh deck/discard, 
+        but does NOT reset the players' phase progress or round number.
+        """
+        self.deck = create_deck()
+        self.discard_pile = [self.deck.pop()]
+
+        self.player_hand = [self.deck.pop() for _ in range(10)]
+        self.computer_hand = [self.deck.pop() for _ in range(10)]
+
         self.current_turn = "player"
         self.has_drawn = False
-        self.skip_turn = False  
+        self.skip_turn = False
         self.played_phases = {"player": [], "computer": []}
-        self.phase_submission_box = []  
+        self.phase_submission_box = []
         self.selected_card_index = None
-        self.phase_submitted = False  # New flag: phase has been submitted this turn
+        self.phase_submitted = False
 
     def draw_card(self, player, from_discard=False):
         if self.phase_submitted:
             # Once a phase is submitted, no further drawing is allowed.
             return
+
         if player == "player" and self.current_turn == "player" and not self.has_drawn:
             if from_discard and self.discard_pile:
                 self.player_hand.append(self.discard_pile.pop())
             elif self.deck:
                 self.player_hand.append(self.deck.pop())
             self.has_drawn = True
+
         elif player == "computer" and self.current_turn == "computer":
             if self.deck:
                 self.computer_hand.append(self.deck.pop())
@@ -91,11 +103,12 @@ class Game:
             self.has_drawn = False
 
             if card.is_skip():
-                self.skip_turn = True  
+                self.skip_turn = True
                 self.current_turn = "player"
             else:
                 self.current_turn = "computer"
 
+            # If the player just discarded their last card, they end the round:
             if not self.player_hand:
                 self.end_round("player")
 
@@ -110,15 +123,21 @@ class Game:
             self.player_hand.append(card)
 
     def check_phase_attempt(self):
+        """
+        NOTE: Currently only checks for sets.
+        You can expand this method to validate runs or color groups 
+        for other phases if desired.
+        """
         phase_goal = PHASES[self.player_phase]
         number_counts = collections.Counter(c.number for c in self.phase_submission_box if not c.is_wild())
         wild_count = sum(1 for c in self.phase_submission_box if c.is_wild())
 
+        # Basic set-based checking:
         sets_needed = phase_goal.get("sets", 0)
         set_size = phase_goal.get("set_size", 0)
 
         formed_sets = 0
-        for num, count in sorted(number_counts.items(), key=lambda x: -x[1]):
+        for _, count in sorted(number_counts.items(), key=lambda x: -x[1]):
             if count >= set_size:
                 formed_sets += 1
             elif count + wild_count >= set_size:
@@ -127,13 +146,14 @@ class Game:
 
             if formed_sets >= sets_needed:
                 return True
+
         return False
 
     def submit_phase(self):
         if self.check_phase_attempt():
             self.played_phases["player"].extend(self.phase_submission_box)
             self.phase_submission_box.clear()
-            self.phase_submitted = True  # Mark phase as submitted so no further drawing is allowed
+            self.phase_submitted = True
 
     def hit_existing_phase(self, card_index):
         if 0 <= card_index < len(self.player_hand):
@@ -141,17 +161,25 @@ class Game:
             self.played_phases["player"].append(card)
 
     def computer_turn(self):
-        # Simple computer logic: draw a card and discard a random card.
+        # Simple computer logic: draw a card and discard a random card
         self.draw_card("computer")
         if self.computer_hand:
             card_index = random.randint(0, len(self.computer_hand) - 1)
             card = self.computer_hand.pop(card_index)
             self.discard_pile.append(card)
+            if not self.computer_hand:
+                self.end_round("computer")
+
         self.current_turn = "player"
 
     def end_round(self, winner):
+        # If the winner is the player, they advance to next phase
+        # If the winner is the computer, the computer advances
         if winner == "player":
             self.player_phase += 1
         else:
             self.computer_phase += 1
-        self.reset_game()
+
+        # Move to next round
+        self.round += 1
+        self.start_new_hand()
