@@ -7,19 +7,16 @@ WILD_COUNT = 8
 SKIP_COUNT = 4
 
 PHASES = [
-    # Phase 1: Two sets of three
-    {"sets": 2, "set_size": 3},
-    # Phase 2: One set of 3 and one run of 4
-    {"sets": 1, "set_size": 3, "run": 4},
-    # Add your other phases as needed...
-    {"sets": 1, "set_size": 4, "run": 4},
-    {"run": 7},
-    {"run": 8},
-    {"run": 9},
-    {"sets": 2, "set_size": 4},
-    {"color": 7},
-    {"sets": 1, "set_size": 5, "set_2": 2},
-    {"sets": 1, "set_size": 5, "set_2": 3},
+    {"sets": 2, "set_size": 3}, # Phase 1: Two sets of three
+    {"sets": 1, "set_size": 3, "run": 4}, # Phase 2: One set of 3 and one run of 4
+    {"sets": 1, "set_size": 4, "run": 4}, # Phase 3: One set of 4 and one run of 4
+    {"run": 7}, # Phase 4: One run of 7
+    {"run": 8}, # Phase 5: One run of 8
+    {"run": 9}, # Phase 6: One run of 9
+    {"sets": 2, "set_size": 4}, # Phase 7: Two sets of 4
+    {"color": 7}, # Phase 8: 7 cards of the same color
+    {"sets": 1, "set_size": 5, "set_2": 2}, # Phase 9: One set of 5 and one set of 2
+    {"sets": 1, "set_size": 5, "set_2": 3}, # Phase 10: One set of 5 and one set of 3
 ]
 
 class Card:
@@ -169,7 +166,8 @@ class Game:
         For demonstration, this method only checks:
           - Phase 1 (2 sets of 3)
           - Phase 2 (1 set of 3 + 1 run of 4)
-        You can expand it for the other phases.
+          - Phase 3 (1 set of 4 + 1 run of 4)
+          - Phase 4-6 (Run-only phases with required len of 7,8,9)
         """
         phase_goal = self.PHASES[self.player_phase]
         combos = self.parse_phase_combination(self.phase_submission_box, phase_goal)
@@ -206,9 +204,6 @@ class Game:
         set_size = phase_goal.get("set_size", 0)
         run_length = phase_goal.get("run", 0)
 
-        # We'll handle 2 scenarios specifically:
-        # 1) sets=2, set_size=3  => 2 sets of 3
-        # 2) sets=1, set_size=3, run=4 => 1 set of 3 and 1 run of 4
 
         # Convert to a list so we can manipulate
         card_list = list(cards)
@@ -228,6 +223,14 @@ class Game:
             combos = self._try_form_one_set_and_one_run3(card_list)
             return combos
 
+        # If Phase 4-6: no set requirement only a run
+        if sets_needed == 0 and run_length > 0:
+            success, used_run, run_cards_sorted = self._can_form_run(card_list, run_length)
+            if success:
+                return [{"type": "run", "cards": run_cards_sorted}]
+            else:
+                return None
+                
         # Otherwise, not implemented yet
         return None
 
