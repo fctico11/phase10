@@ -69,12 +69,14 @@ class Game:
             "player": [],
             "computer": []
         }
-        self.phase_submission_box = []
+        self.phase_submission_box = [] # for the player
         self.selected_card_index = None
+        # Flags indicating wheter each side has submitted their phase
         self.phase_submitted = False
+        self.computer_phase_submitted = False
 
     # ------------------------------
-    # Turn / Hand Management
+    # Turn / Hand Management (Player)
     # ------------------------------
     def draw_card(self, player, from_discard=False):
         if self.phase_submitted:
@@ -100,37 +102,88 @@ class Game:
         if self.selected_card_index is not None and 0 <= self.selected_card_index < len(self.player_hand):
             card_index = self.selected_card_index
             self.selected_card_index = None
-            self.discard_card(card_index)
+            self.discard_card(card_index, player="player")
             return True
         return False
 
-    def discard_card(self, card_index):
-        if 0 <= card_index < len(self.player_hand):
-            card = self.player_hand.pop(card_index)
-            self.discard_pile.append(card)
-            self.has_drawn = False
+    def discard_card(self, card_index, player):
+        # Remove the card from the appropriate hand and place it on the discard pile.
+        if player == "player":
+            if 0 <= card_index < len(self.player_hand):
+                card = self.player_hand.pop(card_index)
+                self.discard_pile.append(card)
+                self.has_drawn = False
 
-            # Skip logic
-            if card.is_skip():
-                self.skip_turn = True
-                self.current_turn = "player"
-            else:
-                self.current_turn = "computer"
+                # Skip card logic
+                if card.is_skip():
+                    self.skip_turn = True
+                    self.current_turn = "player"
+                else:
+                    self.current_turn = "computer"
 
-            # If the player just discarded their last card, round ends
-            if not self.player_hand:
-                self.end_round("player")
+                # If the player has no cards left, round ends.
+                if not self.player_hand:
+                    self.end_round("player")
+        elif player == "computer":
+            if 0 <= card_index < len(self.computer_hand):
+                card = self.computer_hand.pop(card_index)
+                self.discard_pile.append(card)
+                # For the computer, we assume its discard turn only happens after a successful phase.
+                if not self.computer_hand:
+                    self.end_round("computer")
 
+    # Computer phase submission
+    def computer_attempt_phase(self):
+        """
+        The computer examines its entire hand to see if it can complete its current phase.
+        If parse_phase_combination returns a valid combo (based on its hand and phase goal),
+        remove those cards from its hand, add the combos to played_phases["computer"],
+        and mark computer_phase_submitted as True.
+        """
+        phase_goal = self.PHASES[self.computer_phase]
+        combos = self.parse_phase_combination(self.computer_hand, phase_goal)
+        if combos is not None:
+            # Remove the cards used in the combos from computer_hand.
+            used_cards = []
+            for combo in combos:
+                for card in combo["cards"]:
+                    used_cards.append(card)
+            new_hand = []
+            for card in self.computer_hand:
+                if card in used_cards:
+                    used_cards.remove(card)
+                else:
+                    new_hand.append(card)
+            self.computer_hand = new_hand
+            self.played_phases["computer"].extend(combos)
+            self.computer_phase_submitted = True
+
+    # ------------------------------
+    # Computer Turn Logic
+    # ------------------------------
     def computer_turn(self):
-        # Simple logic: draw then discard a random card
+        """
+        The computer's turn plays similarly to the player's:
+         1. It first draws a card.
+         2. If it hasn't submitted its phase yet, it examines its entire hand
+            to see if any combination satisfies its current phase requirements.
+            If so, it submits its phase.
+         3. It then discards one card.
+         4. Its turn ends, and control returns to the player.
+        """
+        # Step 1: Draw a card.
         self.draw_card("computer")
+        
+        # Step 2: If the computer hasn't submitted its phase, attempt to do so.
+        if not self.computer_phase_submitted:
+            self.computer_attempt_phase()
+        
+        # Step 3: Discard one card (simulate a similar discard strategy as the player).
         if self.computer_hand:
             idx = random.randint(0, len(self.computer_hand) - 1)
-            card = self.computer_hand.pop(idx)
-            self.discard_pile.append(card)
-            if not self.computer_hand:
-                self.end_round("computer")
-
+            self.discard_card(idx, player="computer")
+        
+        # Step 4: End turn.
         self.current_turn = "player"
 
     def end_round(self, winner):
@@ -144,7 +197,7 @@ class Game:
         self.start_new_hand()
 
     # ------------------------------
-    # Phase Submission (Sets + Runs)
+    # Phase Submission (Sets + Runs) (Player)
     # ------------------------------
 
     def add_to_phase_attempt(self, card_index):
@@ -230,7 +283,7 @@ class Game:
                 return [{"type": "run", "cards": run_cards_sorted}]
             else:
                 return None
-                
+
         # Otherwise, not implemented yet
         return None
 

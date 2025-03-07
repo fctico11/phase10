@@ -70,10 +70,33 @@
         {% endfor %}
     </div>
 
-    <h2>Played Phases</h2>
-    <div>
+    <!-- New Section: Display Computer's Submitted Phase -->
+    {% if game.played_phases['computer'] %}
+        <h2>Computer Submitted Phase</h2>
+        <div id="computer-phase" style="display: flex; justify-content: center; flex-wrap: wrap;">
+            {% for combo in game.played_phases['computer'] %}
+                <div class="combo" style="margin: 10px; padding: 5px; border: 2px dashed black;">
+                    {% if combo.type == "set" %}
+                        <div><strong>Set ({{ combo.number }})</strong></div>
+                    {% elif combo.type == "run" %}
+                        <div><strong>Run</strong></div>
+                    {% endif %}
+                    <div style="display: flex; flex-wrap: wrap;">
+                        {% for card in combo.cards %}
+                            <div class="card" style="background-color: {{ card.color.lower() if card.color else 'gray' }};">
+                                <span>{{ card.number }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <h2>Played Phases (Player)</h2>
+    <div id="player-phase" style="display: flex; justify-content: center; flex-wrap: wrap;">
         {% for card in game.played_phases['player'] %}
-            <div class="card" style="background-color: {{ card.color.lower() if card.color else 'gray' }}">
+            <div class="card" style="background-color: {{ card.color.lower() if card.color else 'gray' }};">
                 <span>{{ card.number }}</span>
             </div>
         {% endfor %}
@@ -130,4 +153,5 @@
     </h2>
 </body>
 </html>
+
 
